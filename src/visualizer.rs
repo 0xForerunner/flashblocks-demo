@@ -20,6 +20,13 @@ impl HistogramApp {
 
 impl eframe::App for HistogramApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Set up dark theme
+        let mut visuals = egui::Visuals::dark();
+        visuals.override_text_color = Some(egui::Color32::from_rgb(220, 220, 220));
+        visuals.window_fill = egui::Color32::from_rgb(20, 20, 20);
+        visuals.panel_fill = egui::Color32::from_rgb(27, 27, 27);
+        ctx.set_visuals(visuals);
+
         // Request continuous repaints for live updates
         ctx.request_repaint();
 
@@ -29,17 +36,35 @@ impl eframe::App for HistogramApp {
             let (pending_count, non_pending_count, pending_avg, non_pending_avg) = tracker.get_stats();
             drop(tracker);
 
-            ui.heading("Transaction Confirmation Time Histogram");
-            
-            ui.horizontal(|ui| {
-                ui.label(format!("With Pending: {} txs (avg: {:.1}ms)", pending_count, pending_avg));
-                ui.separator();
-                ui.label(format!("Without Pending: {} txs (avg: {:.1}ms)", non_pending_count, non_pending_avg));
+            // Style the heading
+            ui.add_space(10.0);
+            ui.vertical_centered(|ui| {
+                ui.heading(egui::RichText::new("⚡ Transaction Confirmation Time Histogram")
+                    .size(24.0)
+                    .color(egui::Color32::from_rgb(100, 200, 255)));
             });
+            ui.add_space(10.0);
+            
+            // Style the statistics
+            ui.horizontal(|ui| {
+                ui.add_space(20.0);
+                ui.label(egui::RichText::new(format!("🔴 With Pending: {} txs (avg: {:.1}ms)", pending_count, pending_avg))
+                    .size(16.0)
+                    .color(egui::Color32::from_rgb(255, 100, 100)));
+                ui.add_space(20.0);
+                ui.separator();
+                ui.add_space(20.0);
+                ui.label(egui::RichText::new(format!("🔵 Without Pending: {} txs (avg: {:.1}ms)", non_pending_count, non_pending_avg))
+                    .size(16.0)
+                    .color(egui::Color32::from_rgb(100, 150, 255)));
+            });
+            ui.add_space(15.0);
 
             if pending_data.is_empty() && non_pending_data.is_empty() {
                 ui.centered_and_justified(|ui| {
-                    ui.label("Waiting for transaction data...");
+                    ui.label(egui::RichText::new("⏳ Waiting for transaction data...")
+                        .size(18.0)
+                        .color(egui::Color32::from_rgb(150, 150, 150)));
                 });
                 return;
             }
@@ -65,41 +90,45 @@ impl eframe::App for HistogramApp {
                     5.0 // default width
                 };
 
-                // Left bar (red) - pending data
+                // Left bar (bright red) - pending data
                 if i < pending_data.len() && pending_data[i].1 > 0 {
                     pending_bars.push(
                         Bar::new(bin_center - bar_width/2.0, pending_data[i].1 as f64)
                             .width(bar_width)
-                            .fill(egui::Color32::from_rgb(255, 0, 0))
+                            .fill(egui::Color32::from_rgb(255, 80, 80))
                     );
                 }
 
-                // Right bar (blue) - non-pending data
+                // Right bar (bright blue) - non-pending data
                 if i < non_pending_data.len() && non_pending_data[i].1 > 0 {
                     non_pending_bars.push(
                         Bar::new(bin_center + bar_width/2.0, non_pending_data[i].1 as f64)
                             .width(bar_width)
-                            .fill(egui::Color32::from_rgb(0, 0, 255))
+                            .fill(egui::Color32::from_rgb(80, 150, 255))
                     );
                 }
             }
 
             Plot::new("histogram")
                 .height(600.0)
+                .show_background(false)
+                .show_axes([true, true])
+                .allow_zoom(true)
+                .allow_drag(true)
                 .show(ui, |plot_ui| {
                     if !pending_bars.is_empty() {
                         plot_ui.bar_chart(
                             BarChart::new(pending_bars)
-                                .color(egui::Color32::from_rgb(255, 0, 0))
-                                .name("With Pending Tag")
+                                .color(egui::Color32::from_rgb(255, 80, 80))
+                                .name("🔴 With Pending Tag")
                         );
                     }
 
                     if !non_pending_bars.is_empty() {
                         plot_ui.bar_chart(
                             BarChart::new(non_pending_bars)
-                                .color(egui::Color32::from_rgb(0, 0, 255))
-                                .name("Without Pending Tag")
+                                .color(egui::Color32::from_rgb(80, 150, 255))
+                                .name("🔵 Without Pending Tag")
                         );
                     }
                 });
@@ -126,14 +155,20 @@ impl Visualizer {
 
     pub fn run(self) -> Result<(), eframe::Error> {
         let options = eframe::NativeOptions {
-            viewport: egui::ViewportBuilder::default().with_inner_size([1200.0, 800.0]),
+            viewport: egui::ViewportBuilder::default()
+                .with_inner_size([1200.0, 800.0])
+                .with_min_inner_size([800.0, 600.0]),
             ..Default::default()
         };
 
         eframe::run_native(
-            "Transaction Confirmation Time Histogram",
+            "⚡ Flashblocks - Transaction Latency Monitor",
             options,
-            Box::new(|_cc| Ok(Box::new(HistogramApp::new(self.histogram_tracker)))),
+            Box::new(|cc| {
+                // Set dark theme immediately
+                cc.egui_ctx.set_visuals(egui::Visuals::dark());
+                Ok(Box::new(HistogramApp::new(self.histogram_tracker)))
+            }),
         )
     }
 }
