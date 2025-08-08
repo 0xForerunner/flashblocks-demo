@@ -30,17 +30,20 @@ cargo run
 
 The application will:
 1. Connect to your local OP Stack chain
-2. Submit transactions continuously at 6 tx/sec
-3. Generate histogram plots as `histogram_plot_XXXX.png` files every 2 seconds
-4. Print statistics every 20 seconds showing transaction counts and average confirmation times
+2. Submit transactions continuously at 6 tx/sec in the background
+3. Display a live updating histogram window using a native GUI
+4. Print statistics periodically showing transaction counts and average confirmation times
 
 ## Output
 
-- **Histogram plots**: Live updating PNG files showing latency distributions
-- **Console output**: Periodic statistics about transaction confirmation times
-- **Two histograms**: One for transactions with pending tag, one without
+- **Live histogram window**: Native GUI window that updates in real-time at 30+ FPS
+- **Side-by-side bars**: For each time bin, red bars (with pending tag) and blue bars (without pending tag) appear side-by-side
+- **Interactive plot**: Zoom, pan, and hover over bars for detailed information
+- **Real-time stats**: Live display of transaction counts and average confirmation times
+- **Legend**: Color-coded legend showing which bars represent which polling method
+- **Smooth updates**: Native rendering with immediate visual updates as new data arrives
 
-The histograms help visualize the performance difference between using the pending tag override vs standard receipt polling on your OP Stack chain.
+The interactive histogram window helps visualize the performance difference between using the pending tag override vs standard receipt polling on your OP Stack chain. The window updates continuously in real-time as transactions are submitted and confirmed.
 
 ## Requirements
 

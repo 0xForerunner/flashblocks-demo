@@ -30,44 +30,68 @@ impl HistogramTracker {
         }
     }
 
-    pub fn get_pending_histogram_data(&self) -> Vec<(f64, usize)> {
-        self.create_histogram_bins(&self.pending_times)
+
+    pub fn get_aligned_histogram_data(&self) -> ((Vec<(f64, usize)>, Vec<(f64, usize)>), (f64, f64)) {
+        self.create_aligned_histogram_bins()
     }
 
-    pub fn get_non_pending_histogram_data(&self) -> Vec<(f64, usize)> {
-        self.create_histogram_bins(&self.non_pending_times)
-    }
+    fn create_aligned_histogram_bins(&self) -> ((Vec<(f64, usize)>, Vec<(f64, usize)>), (f64, f64)) {
+        let all_data: Vec<f64> = self.pending_times.iter()
+            .chain(self.non_pending_times.iter())
+            .cloned()
+            .collect();
 
-    fn create_histogram_bins(&self, data: &[f64]) -> Vec<(f64, usize)> {
-        if data.is_empty() {
-            return Vec::new();
+        if all_data.is_empty() {
+            return ((Vec::new(), Vec::new()), (0.0, 0.0));
         }
 
-        let min_val = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let max_val = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let min_val = all_data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let max_val = all_data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
         
         if min_val == max_val {
-            return vec![(min_val, data.len())];
+            let pending_count = if self.pending_times.contains(&min_val) { self.pending_times.len() } else { 0 };
+            let non_pending_count = if self.non_pending_times.contains(&min_val) { self.non_pending_times.len() } else { 0 };
+            return ((vec![(min_val, pending_count)], vec![(min_val, non_pending_count)]), (min_val, max_val));
         }
 
         let num_bins = 20;
         let bin_width = (max_val - min_val) / num_bins as f64;
-        let mut bins = vec![0; num_bins];
+        let mut pending_bins = vec![0; num_bins];
+        let mut non_pending_bins = vec![0; num_bins];
 
-        for &value in data {
+        // Fill pending bins
+        for &value in &self.pending_times {
             let bin_index = ((value - min_val) / bin_width).floor() as usize;
             let bin_index = bin_index.min(num_bins - 1);
-            bins[bin_index] += 1;
+            pending_bins[bin_index] += 1;
         }
 
-        bins.into_iter()
+        // Fill non-pending bins
+        for &value in &self.non_pending_times {
+            let bin_index = ((value - min_val) / bin_width).floor() as usize;
+            let bin_index = bin_index.min(num_bins - 1);
+            non_pending_bins[bin_index] += 1;
+        }
+
+        let pending_data: Vec<(f64, usize)> = pending_bins.into_iter()
             .enumerate()
             .map(|(i, count)| {
                 let bin_center = min_val + (i as f64 + 0.5) * bin_width;
                 (bin_center, count)
             })
-            .collect()
+            .collect();
+
+        let non_pending_data: Vec<(f64, usize)> = non_pending_bins.into_iter()
+            .enumerate()
+            .map(|(i, count)| {
+                let bin_center = min_val + (i as f64 + 0.5) * bin_width;
+                (bin_center, count)
+            })
+            .collect();
+
+        ((pending_data, non_pending_data), (min_val, max_val))
     }
+
 
     pub fn get_stats(&self) -> (usize, usize, f64, f64) {
         let pending_count = self.pending_times.len();
