@@ -115,6 +115,8 @@ impl eframe::App for HistogramApp {
                 .show_axes([true, true])
                 .allow_zoom(true)
                 .allow_drag(true)
+                .x_axis_label("Confirmation Time (ms)")
+                .y_axis_label("Transaction Count")
                 .show(ui, |plot_ui| {
                     if !pending_bars.is_empty() {
                         plot_ui.bar_chart(
