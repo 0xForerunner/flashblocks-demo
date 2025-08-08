@@ -5,11 +5,12 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 use anyhow::Result;
+use rand::Rng;
 use std::{
     sync::{Arc, Mutex},
     time::Instant,
 };
-use tokio::time::interval;
+use tokio::time::sleep;
 
 mod histogram_tracker;
 mod receipt_poller;
@@ -39,7 +40,7 @@ impl Default for Config {
             to_address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
                 .parse()
                 .unwrap(),
-            tx_per_second: 6,
+            tx_per_second: 50,
             value: U256::from(1000000000000000u64), // 0.001 ETH
         }
     }
@@ -66,13 +67,17 @@ async fn main() -> Result<()> {
     // Spawn transaction submission loop in background
     let tracker_clone = histogram_tracker.clone();
     let submit_handle = tokio::spawn(async move {
-        let mut interval = interval(tokio::time::Duration::from_millis(
-            1000 / config.tx_per_second,
-        ));
+        let base_interval_ms = 1000 / config.tx_per_second;
         let mut tx_counter = 0u64;
 
         loop {
-            interval.tick().await;
+            // Add random jitter: ±30% of base interval to break correlation with block timing
+            let jitter_range = (base_interval_ms as f64 * 0.3) as u64;
+            let min_interval = base_interval_ms.saturating_sub(jitter_range);
+            let max_interval = base_interval_ms + jitter_range;
+            let random_interval = rand::thread_rng().gen_range(min_interval..=max_interval);
+
+            sleep(tokio::time::Duration::from_millis(random_interval)).await;
 
             let use_pending = tx_counter % 2 == 0;
             match submitter.submit_transaction().await {
@@ -82,7 +87,9 @@ async fn main() -> Result<()> {
                     let poller_clone = poller.clone();
 
                     tokio::spawn(async move {
-                        if let Ok(_receipt) = poller_clone.wait_for_receipt(tx_hash, use_pending).await {
+                        if let Ok(_receipt) =
+                            poller_clone.wait_for_receipt(tx_hash, use_pending).await
+                        {
                             let duration = start_time.elapsed();
                             let mut tracker = tracker.lock().unwrap();
                             tracker.record_transaction(duration, use_pending);
@@ -95,6 +102,14 @@ async fn main() -> Result<()> {
             }
 
             tx_counter += 1;
+
+            // Print jitter info occasionally for debugging
+            if tx_counter % 30 == 0 {
+                println!(
+                    "TX #{}: Used {}ms interval (base: {}ms)",
+                    tx_counter, random_interval, base_interval_ms
+                );
+            }
         }
     });
 

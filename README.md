@@ -16,7 +16,7 @@ The application uses default configuration in `main.rs`:
 - Private key: Hardhat's first test account
 - Target address: Hardhat's second test account
 - Transaction value: 0.001 ETH
-- Rate: 6 transactions per second
+- Rate: 6 transactions per second (with ±30% random jitter to avoid block correlation)
 
 ## Usage
 
