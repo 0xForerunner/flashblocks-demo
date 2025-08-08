@@ -110,7 +110,7 @@ impl eframe::App for HistogramApp {
             }
 
             Plot::new("histogram")
-                .height(600.0)
+                .height(800.0)
                 .show_background(false)
                 .show_axes([true, true])
                 .allow_zoom(true)
@@ -158,8 +158,10 @@ impl Visualizer {
     pub fn run(self) -> Result<(), eframe::Error> {
         let options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
-                .with_inner_size([1200.0, 800.0])
-                .with_min_inner_size([800.0, 600.0]),
+                .with_inner_size([1680.0, 1050.0])  // Good for MacBook Pro displays
+                .with_min_inner_size([1200.0, 800.0])
+                .with_resizable(true)
+                .with_maximize_button(true),
             ..Default::default()
         };
 
