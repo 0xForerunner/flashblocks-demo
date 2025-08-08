@@ -51,8 +51,7 @@ impl ReceiptPoller {
         tx_hash: TxHash,
     ) -> Result<Option<TransactionReceipt>> {
         // Create parameters array with tx_hash and "pending"
-        // let params = json!([tx_hash.to_string(), "pending"]);
-        let params = json!([tx_hash.to_string()]);
+        let params = json!([tx_hash.to_string(), "pending"]);
 
         // Make raw RPC call
         let result: Result<Option<TransactionReceipt>, _> = self
